@@ -270,8 +270,65 @@ function showOpts(opts){let h='<div class="options-grid">';opts.forEach(o=>h+='<
 function checkInput(){const v=parseInt(document.getElementById('ans').value);check(v);}
 function checkNum(n){check(n);}
 function checkOpt(el,v){check(v);}
-function check(v){const fb=document.getElementById('feedback');if(isNaN(v)&&typeof v!=='string'){fb.textContent='Choisis une reponse !';fb.className='feedback wrong';playSound('wrong');return;}if(v===S.ans){S.score+=10+S.streak*2;S.streak++;S.qCorrect++;fb.textContent='Bravo ! Correct !';fb.className='feedback correct';playSound('correct');celebrate();}else{S.streak=0;S.qWrong++;fb.textContent='Essaye encore ! La reponse etait '+S.ans;fb.className='feedback wrong';playSound('wrong');}updateGameInfo();setTimeout(nextQuestion,1500);}
+function check(v){
+    const fb = document.getElementById('feedback');
 
+    if(isNaN(v) && typeof v !== 'string'){
+        fb.textContent = 'Choisis une reponse !';
+        fb.className = 'feedback wrong';
+        playSound('wrong');
+        return;
+    }
+
+    if(v === S.ans){
+
+        S.score += 10 + S.streak * 2;
+        S.streak++;
+        S.qCorrect++;
+
+        // SEND METRIC → correct answer
+        fetch("http://localhost:8000/game-event", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                event: "correct_answer"
+            })
+        });
+
+        fb.textContent = 'Bravo ! Correct !';
+        fb.className = 'feedback correct';
+
+        playSound('correct');
+        celebrate();
+
+    } else {
+
+        S.streak = 0;
+        S.qWrong++;
+
+        // SEND METRIC → wrong answer
+        fetch("http://localhost:8000/game-event", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                event: "wrong_answer"
+            })
+        });
+
+        fb.textContent = 'Essaye encore ! La reponse etait ' + S.ans;
+        fb.className = 'feedback wrong';
+
+        playSound('wrong');
+    }
+
+    updateGameInfo();
+
+    setTimeout(nextQuestion, 1500);
+}
 function clearFeedback(){document.getElementById('feedback').textContent='';document.getElementById('feedback').className='feedback';}
 function endLevel(){clearInterval(S.timer);const accuracy=S.qCorrect/S.qTotal;const stars=accuracy>=0.9?3:accuracy>=0.7?2:accuracy>=0.5?1:0;setStars(S.mode,S.level,stars);document.getElementById('modal-title').textContent='Niveau '+S.level+' termine !';document.getElementById('modal-stars').textContent='⭐'.repeat(stars);document.getElementById('modal-msg').innerHTML='<p>Score: '+S.score+'</p><p>Correct: '+S.qCorrect+'/'+S.qTotal+'</p>';document.getElementById('modal-overlay').classList.add('show');}
 function nextLevel(){document.getElementById('modal-overlay').classList.remove('show');if(S.level<10)startLevel(S.level+1);else goHome();}
